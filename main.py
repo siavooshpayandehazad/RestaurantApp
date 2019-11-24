@@ -11,11 +11,17 @@ from flask import render_template, make_response
 
 DB_connection = sqlite3.connect("restaurant.db",  check_same_thread=False)
 DB_cureser  =  DB_connection.cursor()
+
+DB_cureser.execute("""CREATE TABLE if not exists priceTable (
+                    item text,
+                    price text)""")
+
 DB_cureser.execute("""CREATE TABLE if not exists orderTable (
                     orderedItem text,
                     number text,
                     date text,
-                    time text)""")
+                    time text,
+                    price text)""")
 
 DB_cureser.execute("""CREATE TABLE if not exists kitchenOrders (
                     orderedItem text,
@@ -24,7 +30,7 @@ DB_cureser.execute("""CREATE TABLE if not exists kitchenOrders (
                     time text,
                     state text)""")
 
-foodList = ["veggiefajitas", "meatballs","cinnamonroll",  "coffee"]
+priceDict = {"veggiefajitas": "86", "meatballs": "78","cinnamonroll": "15",  "coffee": "10"}
 kitchenList = ["veggiefajitas", "meatballs"]
 
 app = Flask(__name__, template_folder='template', static_url_path='/static')
@@ -56,7 +62,7 @@ class kitchen(Resource):
 class cashReg(Resource):
     def get(self):
         headers = {'Content-Type': 'text/html'}
-        return make_response(render_template('cashregister.html', foodList = foodList, host_ip=host_ip),200,headers)
+        return make_response(render_template('cashregister.html', foodList = priceDict.keys(), host_ip=host_ip),200,headers)
 
 class waitingroom(Resource):
     def get(self):
@@ -82,7 +88,9 @@ def save_order():
     req_data = request.get_json()
     for item in req_data:
         if item not in ["date", "time"]:
-            DB_cureser.execute("""INSERT INTO orderTable VALUES(?, ?, ?, ?)""", (item, req_data[item], req_data["date"], req_data["time"]))
+            DB_cureser.execute("""SELECT * FROM priceTable WHERE item = ?""", (item, ))
+            price = DB_cureser.fetchall()[0][1]
+            DB_cureser.execute("""INSERT INTO orderTable VALUES(?, ?, ?, ?, ?)""", (item, req_data[item], req_data["date"], req_data["time"], price))
             if item in kitchenList:
                 DB_cureser.execute("""INSERT INTO kitchenOrders VALUES(?, ?, ?, ?, ?)""", (item, req_data[item], req_data["date"], req_data["time"], "incomplete"))
         DB_connection.commit()
@@ -106,10 +114,31 @@ def order_taken():
     DB_connection.commit()
     return "Done", 200
 
+
+@app.route('/get_price', methods=['POST'])
+def get_price():
+    req_data = request.get_json()
+    print(req_data)
+    DB_cureser.execute("""SELECT * FROM priceTable WHERE item = ?""", (req_data["item"], ))
+    price = DB_cureser.fetchall()[0][1]
+    print(price)
+    return jsonify({"item": req_data["item"], "price": price}), 200
+
 api.add_resource(cashReg, '/cashregister.html')
 api.add_resource(bookkeeping, '/bookkeeping.html')
 api.add_resource(kitchen, '/kitchen.html')
 api.add_resource(waitingroom, '/waitingroom.html')
 
+
+def setup_priceTable():
+    DB_cureser.execute("DROP TABLE priceTable")
+    DB_cureser.execute("""CREATE TABLE priceTable (
+                        item text,
+                        price text)""")
+    for item in priceDict:
+        DB_cureser.execute("""INSERT INTO priceTable VALUES(?, ?)""", (item, priceDict[item]))
+    DB_connection.commit()
+
 if __name__ == '__main__':
+    setup_priceTable()
     app.run(debug=True, host='0.0.0.0', port=5000)
