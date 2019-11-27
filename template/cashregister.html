@@ -7,9 +7,28 @@
     <meta charset="utf-8">
     <title>Restaurant Management System</title>
     <script>
-
+    function login(){
+      var user = document.getElementById("user");
+      var pass = document.getElementById("psw");
+      $.ajax({ type: "POST",
+               dataType: "json",
+               contentType: 'application/json',
+               url: "http://{{host_ip|safe}}:5000/auth",
+               data: JSON.stringify({"user": user.value, "pass": pass.value}),
+               success: function(response) {
+                if (response["result"]=="pass"){
+                  console.log("Authentication passed");
+                   document.getElementById("loginform").style.display = "none";
+                   document.getElementById("overlaydiv").style.display = "none";
+                }else{
+                  console.log("Authentication failed");
+                }
+              }
+              });
+      return false;
+    }
     function addItemtoList(item) {
-      var table = document.getElementById("orderTable")
+      var table = document.getElementById("orderTable");
       var item = item.src.split("img/")[1].split(".")[0];
       console.log('adding item to order list', item)
       var price;
@@ -39,8 +58,17 @@
               }
               });
 
+      var tableSize = table.rows.length;
+      var sum = 0;
+      for (i = 1; i < tableSize; i++) {
+          var key = table.rows[i].cells[2].innerHTML;
+          sum = sum + parseInt(key, 10);
+      };
+      console.log("current sum:", sum);
+      var sumVal = document.getElementById("sumValue")
+      sumVal.innerHTML=sum;
 
-    }
+    };
 
     function submitOrder(){
       var orders = {};
@@ -70,10 +98,26 @@
       for (j = 1; j < tableSize; j++) {
         table.deleteRow(-1);
       }
+      var sumVal = document.getElementById("sumValue")
+      sumVal.innerHTML=0;
     };
     </script>
   </head>
   <body>
+
+  <div id="loginform" style="width:220px; background: white;z-index: 11; display: block; position: fixed; top: 0; left: 33%; border-radius: 10px; border: 3px solid #f1f1f1;">
+  <form onsubmit="return login();">
+    <h3 style="margin-left:50px;">Login</h3>
+    <label style="margin-left:10px;" for="email">User name</label>
+    <input type="text" placeholder="Enter user name" id="user" required><br>
+    <label  style="margin-left:10px;" for="psw">Password</label>
+    <input type="password" placeholder="Enter Password" id="psw" required><br>
+    <button style="margin-left:50px; margin-top:10px;" type="submit">Login</button>
+  </form>
+  </div>
+
+  <div class="overlay" id="overlaydiv" style="opacity: 0.5; background: #000; width: 100%; height: 100%; z-index: 5; top: 0; left: 0; position:fixed"></div>
+
     <div style="float: right; width: 100%; margin-bottom: 10px;">
       <a class="navbar_button chosen" href="http://{{host_ip|safe}}:5000/cashregister.html"> Cash Register </a>
       <a class="navbar_button" href="http://{{host_ip|safe}}:5000/kitchen.html"> Kitchen </a>
@@ -95,6 +139,7 @@
           <tr><th width="70%"> items </th> <th> numbers </th> <th> price </th> <th>  </th></tr>
         </table>
       </div>
+      <div>SUM: <span id="sumValue"> 0 </span> Kr</div>
       <button type="button" class="submitButton" onclick="submitOrder()">Submit</button>
     <div>
   </body>

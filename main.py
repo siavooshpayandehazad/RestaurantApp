@@ -30,7 +30,11 @@ DB_cureser.execute("""CREATE TABLE if not exists kitchenOrders (
                     time text,
                     state text)""")
 
-priceDict = {"veggiefajitas": "86", "meatballs": "78","cinnamonroll": "15",  "coffee": "10"}
+DB_cureser.execute("""CREATE TABLE if not exists user_DB (
+                    user text,
+                    pass text)""")
+
+priceDict = {"veggiefajitas": "86", "meatballs": "78","cinnamonroll": "15",  "coffee": "10", "free-coffee": "0"}
 kitchenList = ["veggiefajitas", "meatballs"]
 
 app = Flask(__name__, template_folder='template', static_url_path='/static')
@@ -62,7 +66,9 @@ class kitchen(Resource):
 class cashReg(Resource):
     def get(self):
         headers = {'Content-Type': 'text/html'}
-        return make_response(render_template('cashregister.html', foodList = priceDict.keys(), host_ip=host_ip),200,headers)
+        foodList = list(priceDict.keys())
+        foodList.remove("free-coffee")
+        return make_response(render_template('cashregister.html', foodList = foodList, host_ip=host_ip),200,headers)
 
 class waitingroom(Resource):
     def get(self):
@@ -115,6 +121,17 @@ def order_taken():
     return "Done", 200
 
 
+@app.route('/auth', methods=['POST'])
+def auth():
+    req_data = request.get_json()
+    print(req_data)
+    DB_cureser.execute("""SELECT * FROM user_DB WHERE user == ? and pass = ? """, (req_data["user"] , req_data["pass"], ))
+    userData = DB_cureser.fetchall()
+    if len(userData)>0:
+        return jsonify({"result": "pass"}), 200
+    else:
+        return jsonify({"result": "fail"}), 200
+
 @app.route('/get_price', methods=['POST'])
 def get_price():
     req_data = request.get_json()
@@ -137,6 +154,13 @@ def setup_priceTable():
                         price text)""")
     for item in priceDict:
         DB_cureser.execute("""INSERT INTO priceTable VALUES(?, ?)""", (item, priceDict[item]))
+    DB_connection.commit()
+
+    DB_cureser.execute("DROP TABLE user_DB")
+    DB_cureser.execute("""CREATE TABLE user_DB (
+                        user text,
+                        pass text)""")
+    DB_cureser.execute("""INSERT INTO user_DB VALUES(?, ?)""", ("user", "pass"))
     DB_connection.commit()
 
 if __name__ == '__main__':
