@@ -5,7 +5,7 @@ import sys, os
 import socket
 
 from flask import Flask
-from flask import request, jsonify
+from flask import request, jsonify, redirect
 from flask_restful import abort, Api, Resource
 from flask import render_template, make_response
 
@@ -81,12 +81,27 @@ class waitingroom(Resource):
 
 class bookkeeping(Resource):
     def get(self):
-        headers = {'Content-Type': 'text/html'}
-        monthsBeginning = datetime.date.today().replace(day=1)
-        monthsEnd = getMonthsEnd(monthsBeginning.month, monthsBeginning.year)
-        DB_cureser.execute("""SELECT * FROM orderTable WHERE date >= ? and date <= ? """, (monthsBeginning, monthsEnd, ))
+        start = datetime.date.today().replace(day=1)
+        end = getMonthsEnd(start.month, start.year)
+        DB_cureser.execute("""SELECT * FROM orderTable WHERE date >= ? and date <= ? """, (start, end, ))
         orderedItems = DB_cureser.fetchall()
+        headers = {'Content-Type': 'text/html'}
         return make_response(render_template('bookkeeping.html', orderedItems=orderedItems, host_ip=host_ip),200,headers)
+
+    def post(self):
+        req_data = request.get_json()
+        print(req_data)
+        if req_data is not None:
+            start = req_data["start"]
+            end = req_data["end"]
+            print(start, end)
+        else:
+            start = datetime.date.today().replace(day=1)
+            end = getMonthsEnd(start.month, start.year)
+        DB_cureser.execute("""SELECT * FROM orderTable WHERE date >= ? and date <= ? """, (start, end, ))
+        orderedItems = DB_cureser.fetchall()
+        headers = {'Content-Type': 'text/html'}
+        return orderedItems, 200
 
 
 @app.route('/save_order', methods=['POST'])

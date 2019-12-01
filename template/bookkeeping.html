@@ -5,6 +5,39 @@
     <script type="text/javascript" src="static/jquery.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <meta charset="utf-8">
+    <script>
+    function submit(){
+      var start = document.getElementById("start");
+      var end = document.getElementById("end");
+      $.ajax({ type: "POST",
+               dataType: "json",
+               contentType: 'application/json',
+               url: "http://{{host_ip|safe}}:5000/bookkeeping.html",
+               data: JSON.stringify({"start": start.value, "end": end.value}),
+               success: function(response) {
+                 var table = document.getElementById("results");
+                 var tableSize = table.rows.length;
+                 console.log("table rows:", tableSize);
+                 for (i = tableSize-1; i >0 ; i--) {
+                     table.deleteRow(i);
+                 };
+                 console.log(response)
+                 for(i=0; i<response.length;i++){
+                   var row = table.insertRow(-1);
+                   var cell1 = row.insertCell(0);
+                   var cell2 = row.insertCell(1);
+                   var cell3 = row.insertCell(2);
+                   var cell4 = row.insertCell(3);
+                   cell1.innerHTML = response[i][0];
+                   cell2.innerHTML = response[i][1];
+                   cell3.innerHTML = response[i][2];
+                   cell4.innerHTML = response[i][3];
+
+                 }
+               },
+              });
+    };
+    </script>
     <title>Restaurant Management System</title>
   </head>
   <body>
@@ -18,7 +51,15 @@
 
     <div>
       <h3 style="text-align:center">Orders In This Month</h3>
-      <table border= 1  style="background-color:white; margin-left:15%; width:70%">
+
+      <divs style="width:100%;">
+        <label style="margin-left:30%;"> date:</label>
+        <input type="date" id="start" value="2018-07-22" min="2010-01-01" max="2022-12-31"> -
+        <input type="date" id="end" value="2018-07-22" min="2010-01-01" max="2022-12-31">
+        <input type="submit" onclick="submit()">
+      </div>
+
+      <table id="results" border= 1  style="background-color:white; margin-top: 20px; margin-left:15%; width:70%">
         <tr><th width="55%"> Item </th> <th width="15%"> Numbers </th> <th width="15%"> Date </th>  <th width="15%"> Time </th> </tr>
       {%for item in orderedItems%}
         <tr><td width="55%"> {{item[0]}} </td> <td width="15%"> {{item[1]}} </td> <td width="15%"> {{item[2]}} </td>  <td width="15%"> {{item[3]}} </td> </tr>
